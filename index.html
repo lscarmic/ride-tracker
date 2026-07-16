@@ -70,6 +70,6 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   });
   document.getElementById('totmi').textContent=D.legs.reduce((s,l)=>s+l.miles,0).toLocaleString(undefined,{maximumFractionDigits:0})+' mi';
   document.getElementById('updated').textContent='Updated '+D.updated;
-  if(D.legs.length) map.fitBounds(group.getBounds().pad(0.06));
+  if(group.getLayers().length) map.fitBounds(group.getBounds().pad(0.06));
 });
 </script></body></html>
