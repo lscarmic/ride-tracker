@@ -13,6 +13,7 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,'Seg
 .leg:hover{background:#f0f0f0}
 .leg .swatch{width:14px;height:14px;border-radius:4px;flex:none}
 .leg .nm{font-size:13px;font-weight:600}
+.leg .ds{font-size:11px;color:#777}
 .leg .mi{margin-left:auto;font-size:12px;color:#444;font-variant-numeric:tabular-nums;padding-left:10px}
 .leg.off{opacity:.35}
 #total{border-top:1px solid #ddd;margin-top:8px;padding-top:8px;font-size:13px;display:flex;justify-content:space-between}
@@ -23,7 +24,7 @@ html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,'Seg
 <div id="panel">
 <h1 id="title">Lee's Ride</h1><div class="sub">Tap a leg to show/hide · click a line for details</div>
 <div id="legs"></div>
-<div id="total"><span>Total</span><strong id="totmi"></strong></div>
+<div id="total"><span>Ridden</span><strong id="totmi"></strong></div>
 <div id="updated"></div>
 </div>
 <script>
@@ -32,15 +33,37 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&
 const group=L.featureGroup().addTo(map);
 fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   const legDiv=document.getElementById('legs');
+  // planned routes: gray dashed underlay with a single toggle
+  const planned=(D.planned||[]).map(p=>{
+    const l=L.polyline(p.pts,{color:'#8a8f98',weight:3,opacity:.7,dashArray:'6 6'});
+    l.bindPopup(`<b>${p.name}</b> (planned)<br>${p.miles.toLocaleString()} miles`);
+    l.addTo(group);
+    return l;
+  });
+  if(planned.length){
+    const row=document.createElement('div');
+    row.className='leg';
+    row.innerHTML=`<div class="swatch" style="background:repeating-linear-gradient(90deg,#8a8f98 0 4px,transparent 4px 8px)"></div><div class="nm" style="color:#666">Planned route</div><div class="mi">${D.planned.reduce((s,l)=>s+l.miles,0).toLocaleString(undefined,{maximumFractionDigits:0})} mi</div>`;
+    let on=true;
+    row.onclick=()=>{on=!on;row.classList.toggle('off',!on);planned.forEach(x=>on?x.addTo(group):group.removeLayer(x));};
+    legDiv.appendChild(row);
+  }
   D.legs.forEach(leg=>{
     const line=L.polyline(leg.pts,{color:leg.color,weight:4,opacity:.9});
-    line.bindPopup(`<b>${leg.name}</b><br>${leg.miles.toLocaleString()} miles`);
+    const st=leg.stats||{};
+    const bits=[leg.miles.toLocaleString()+' mi'];
+    if(st.moving) bits.push(st.moving+' moving');
+    if(st.avg) bits.push(st.avg+' mph avg');
+    if(st.elev) bits.push(st.elev.toLocaleString()+' ft \u2191');
+    line.bindPopup(`<b>${leg.name}</b>${st.date?' · '+st.date:''}<br>${bits.join(' · ')}`);
     line.addTo(group);
+    line.bringToFront();
     const mk=p=>L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:leg.color,fillOpacity:1});
     const m1=mk(leg.pts[0]).addTo(group), m2=mk(leg.pts[leg.pts.length-1]).addTo(group);
     const row=document.createElement('div');
     row.className='leg';
-    row.innerHTML=`<div class="swatch" style="background:${leg.color}"></div><div class="nm">${leg.name}</div><div class="mi">${leg.miles.toLocaleString()} mi</div>`;
+    const sub=[st.moving&&st.moving+' moving',st.avg&&st.avg+' mph',st.elev&&st.elev.toLocaleString()+' ft \u2191'].filter(Boolean).join(' · ');
+    row.innerHTML=`<div class="swatch" style="background:${leg.color}"></div><div><div class="nm">${leg.name}</div>${sub?`<div class="ds">${sub}</div>`:''}</div><div class="mi">${leg.miles.toLocaleString()} mi</div>`;
     let on=true;
     row.onclick=()=>{on=!on;row.classList.toggle('off',!on);[line,m1,m2].forEach(x=>on?x.addTo(group):group.removeLayer(x));};
     legDiv.appendChild(row);

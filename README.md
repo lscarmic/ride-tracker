@@ -16,6 +16,16 @@ GitHub Pages URL rebuilds itself in about a minute.
    select **Read and write permissions** → Save.
 5. Your map is live at `https://<username>.github.io/ride-tracker/`
 
+## Folders
+
+- `planned/` — the intended routes, drawn as a gray dashed line.
+- `gpx/` — actual ride recordings, drawn in color on top. Upload here daily.
+
+## Folders
+
+- `planned/` — the intended routes, drawn as a gray dashed line.
+- `gpx/` — actual ride recordings, drawn in color on top. Upload here daily.
+
 ## Daily use (from your phone)
 
 1. Export the day's ride from REVER as GPX.
