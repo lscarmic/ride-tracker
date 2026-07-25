@@ -113,9 +113,19 @@ def build(folder, target, with_stats):
 
 legs = build("gpx", 1500, True)
 planned = build("planned", 900, False)
+photos = []
+for f in sorted(glob.glob("photos/*")):
+    if not re.search(r'\.(jpe?g|png|webp|gif)$', f, re.I): continue
+    base = os.path.splitext(os.path.basename(f))[0]
+    m = re.match(r'^0*(\d+)\s*(.*)$', base)
+    day = int(m.group(1)) if m else None
+    caption = (m.group(2) if m else base).strip(" -_") or ""
+    photos.append({"file": f, "day": day, "caption": caption})
+print(f"photos: {len(photos)}")
+
 out = {
     "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-    "legs": legs, "planned": planned,
+    "legs": legs, "planned": planned, "photos": photos,
 }
 json.dump(out, open("data.json", "w"))
 print(f"data.json: {len(legs)} legs, {len(planned)} planned")

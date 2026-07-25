@@ -4,15 +4,24 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1d2733}
-body{display:flex;flex-direction:column}
+html,body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1d2733}
+body{display:flex;flex-direction:column;min-height:100vh}
 header{display:flex;align-items:baseline;gap:14px;padding:14px 20px 12px;color:#fff}
 header h1{font-size:20px;margin:0;letter-spacing:.3px}
 header .tag{font-size:12px;color:#9fb0c3}
 header a{margin-left:auto;font-size:13px;color:#7fd0ff;text-decoration:none;border:1px solid #3a4a5e;padding:5px 12px;border-radius:999px;white-space:nowrap}
 header a:hover{background:#2a3948}
-#wrap{position:relative;flex:1;margin:0 14px 14px;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.45);border:1px solid #3a4a5e}
+#wrap{position:relative;height:72vh;margin:0 14px;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.45);border:1px solid #3a4a5e}
 #map{position:absolute;inset:0}
+#gallery{margin:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+#gallery figure{margin:0;position:relative;border-radius:10px;overflow:hidden;border:1px solid #3a4a5e;cursor:pointer;aspect-ratio:4/3;background:#2a3948}
+#gallery img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+#gallery figure:hover img{transform:scale(1.04)}
+#gallery figcaption{position:absolute;left:0;right:0;bottom:0;padding:18px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;font-size:12px}
+#gallery .day{background:#7fd0ff;color:#0d2233;font-weight:700;border-radius:4px;padding:1px 5px;margin-right:6px;font-size:11px}
+#lightbox{position:fixed;inset:0;background:rgba(10,15,20,.93);display:none;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:10px}
+#lightbox img{max-width:92vw;max-height:84vh;border-radius:8px}
+#lightbox .cap{color:#dce6f0;font-size:14px}
 #panel{position:absolute;top:12px;right:12px;z-index:1000;background:rgba(255,255,255,.95);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.25);padding:14px 16px;min-width:230px;max-width:300px;max-height:calc(100% - 48px);overflow:auto}
 #panel h1{font-size:16px;margin:0 0 2px}
 #panel .sub{font-size:11px;color:#666;margin-bottom:10px}
@@ -40,12 +49,14 @@ header a:hover{background:#2a3948}
 <div id="updated"></div>
 </div>
 </div>
+<div id="gallery"></div>
+<div id="lightbox" onclick="this.style.display='none'"><img><div class="cap"></div></div>
 <script>
 // ===== edit these =====
 const CONFIG={
   title:"Lee's Ride",
-  subtitle:"US Tour, 2026, July 24 - ?",
-  inreachUrl:"https://live.garmin.com/leecarmichael"   // your inReach MapShare link
+  subtitle:"Chattanooga \u2192 Roswell \u2192 home \u00b7 July 2026",
+  inreachUrl:"https://share.garmin.com/YOURNAME"   // your inReach MapShare link
 };
 // ======================
 document.getElementById('pageTitle').textContent=CONFIG.title;
@@ -96,5 +107,13 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   document.getElementById('totmi').textContent=D.legs.reduce((s,l)=>s+l.miles,0).toLocaleString(undefined,{maximumFractionDigits:0})+' mi';
   document.getElementById('updated').textContent='Updated '+D.updated;
   if(group.getLayers().length) map.fitBounds(group.getBounds().pad(0.06));
+  const gal=document.getElementById('gallery'), lb=document.getElementById('lightbox');
+  (D.photos||[]).forEach(ph=>{
+    const fig=document.createElement('figure');
+    const cap=(ph.day?`<span class="day">Day ${ph.day}</span>`:'')+(ph.caption||'');
+    fig.innerHTML=`<img src="${encodeURI(ph.file)}" loading="lazy" alt=""><figcaption>${cap}</figcaption>`;
+    fig.onclick=()=>{lb.querySelector('img').src=encodeURI(ph.file);lb.querySelector('.cap').innerHTML=cap;lb.style.display='flex';};
+    gal.appendChild(fig);
+  });
 });
 </script></body></html>
