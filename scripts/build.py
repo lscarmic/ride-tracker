@@ -117,10 +117,15 @@ photos = []
 for f in sorted(glob.glob("photos/*")):
     if not re.search(r'\.(jpe?g|png|webp|gif)$', f, re.I): continue
     base = os.path.splitext(os.path.basename(f))[0]
-    m = re.match(r'^0*(\d+)\s*(.*)$', base)
-    day = int(m.group(1)) if m else None
-    caption = (m.group(2) if m else base).strip(" -_") or ""
-    photos.append({"file": f, "day": day, "caption": caption})
+    m = re.match(r'^0*(\d+)(?:[-_.]0*(\d+))?\s*(.*)$', base)
+    if m:
+        day = int(m.group(1))
+        seq = int(m.group(2)) if m.group(2) else 0
+        caption = m.group(3).strip(" -_")
+    else:
+        day, seq, caption = None, 0, base
+    photos.append({"file": f, "day": day, "seq": seq, "caption": caption})
+photos.sort(key=lambda p: (p["day"] if p["day"] is not None else 999, p["seq"], p["file"]))
 print(f"photos: {len(photos)}")
 
 out = {
