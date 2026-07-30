@@ -3,6 +3,9 @@
 Auto-detects timestamps/elevation (e.g. Strava exports) and computes stats."""
 import re, math, json, glob, os, datetime
 
+DEFAULT_UTC_OFFSET = "-06:00"   # trip default (Mountain Daylight); per-photo EXIF offset wins
+TIMED = []  # (utc_ts, lat, lon) from ridden legs, for photo pinning
+
 PALETTE = ["#e63946","#2a9d8f","#f4a261","#457b9d","#8338ec","#ff006e",
            "#06d6a0","#ffbe0b","#3a86ff","#fb5607","#118ab2","#9b2226"]
 
@@ -97,6 +100,8 @@ def build(folder, target, with_stats):
         if len(pts) < 2:
             print(f"skip {f}: no track points"); continue
         lls = [(p[0], p[1]) for p in pts]
+        if with_stats:
+            TIMED.extend((p[3], p[0], p[1]) for p in pts if p[3] is not None)
         s = simplify(lls, target)
         leg = {
             "name": name,
@@ -113,6 +118,44 @@ def build(folder, target, with_stats):
 
 legs = build("gpx", 1500, True)
 planned = build("planned", 900, False)
+def photo_meta(path):
+    """Return (description, utc_timestamp) from EXIF/IPTC/XMP; either may be None."""
+    desc, ts = None, None
+    try:
+        from PIL import Image, IptcImagePlugin
+        im = Image.open(path)
+        ex = im.getexif()
+        desc = ex.get(0x010E) or None
+        if not desc:
+            iptc = IptcImagePlugin.getiptcinfo(im) or {}
+            v = iptc.get((2, 120))
+            if v: desc = (v[0] if isinstance(v, list) else v).decode("utf-8", "replace")
+        if not desc:
+            raw = open(path, "rb").read()
+            m = re.search(rb'<dc:description>.*?<rdf:li[^>]*>(.*?)</rdf:li>', raw, re.S)
+            if m: desc = m.group(1).decode("utf-8", "replace").strip()
+        exif_ifd = ex.get_ifd(0x8769) if hasattr(ex, "get_ifd") else {}
+        dto = exif_ifd.get(0x9003) or ex.get(0x9003) or ex.get(0x0132)
+        off = exif_ifd.get(0x9011) or ex.get(0x9011) or DEFAULT_UTC_OFFSET
+        if dto:
+            dt = datetime.datetime.strptime(str(dto), "%Y:%m:%d %H:%M:%S")
+            sign = -1 if str(off).startswith("-") else 1
+            hh, mm = str(off).lstrip("+-").split(":")
+            ts = dt.replace(tzinfo=datetime.timezone(sign*datetime.timedelta(hours=int(hh), minutes=int(mm)))).timestamp()
+    except Exception as e:
+        print(f"  meta {path}: {e}")
+    return desc, ts
+
+TIMED.sort()
+import bisect
+def pin(ts, max_gap=1800):
+    if ts is None or not TIMED: return None
+    i = bisect.bisect_left(TIMED, (ts,))
+    best = min((c for c in TIMED[max(0,i-1):i+1]), key=lambda c: abs(c[0]-ts), default=None)
+    if best and abs(best[0]-ts) <= max_gap:
+        return round(best[1], 5), round(best[2], 5)
+    return None
+
 photos = []
 for f in sorted(glob.glob("photos/*")):
     if not re.search(r'\.(jpe?g|png|webp|gif)$', f, re.I): continue
@@ -124,7 +167,12 @@ for f in sorted(glob.glob("photos/*")):
         caption = m.group(3).strip(" -_")
     else:
         day, seq, caption = None, 0, base
-    photos.append({"file": f, "day": day, "seq": seq, "caption": caption})
+    ph = {"file": f, "day": day, "seq": seq, "caption": caption}
+    desc, ts = photo_meta(f)
+    if desc: ph["desc"] = str(desc).strip()
+    loc = pin(ts)
+    if loc: ph["lat"], ph["lon"] = loc
+    photos.append(ph)
 photos.sort(key=lambda p: (p["day"] if p["day"] is not None else 999, p["seq"], p["file"]))
 print(f"photos: {len(photos)}")
 
