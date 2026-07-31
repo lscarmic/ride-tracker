@@ -165,7 +165,7 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
         .addTo(pinLayer).on('click',()=>show(i));
     }
   });
-  const PIN_MIN_ZOOM=9;
+  const PIN_MIN_ZOOM=6;
   function updatePins(){
     if(map.getZoom()>=PIN_MIN_ZOOM) pinLayer.addTo(map);
     else map.removeLayer(pinLayer);
