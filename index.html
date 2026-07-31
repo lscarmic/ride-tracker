@@ -127,6 +127,7 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
     return `<span class="day" style="background:${c};color:${tx}">Day ${d}</span>`;
   };
   const PH=D.photos||[];
+  const pinLayer=L.layerGroup();
   let cur=-1;
   function show(i){
     if(!PH.length) return;
@@ -161,8 +162,15 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
     gal.appendChild(fig);
     if(ph.lat){
       L.marker([ph.lat,ph.lon],{icon:L.divIcon({className:'photopin',html:'&#128247;',iconSize:[24,24],iconAnchor:[12,12]})})
-        .addTo(map).on('click',()=>show(i));
+        .addTo(pinLayer).on('click',()=>show(i));
     }
   });
+  const PIN_MIN_ZOOM=9;
+  function updatePins(){
+    if(map.getZoom()>=PIN_MIN_ZOOM) pinLayer.addTo(map);
+    else map.removeLayer(pinLayer);
+  }
+  map.on('zoomend',updatePins);
+  updatePins();
 });
 </script></body></html>
