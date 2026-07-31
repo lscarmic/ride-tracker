@@ -144,6 +144,14 @@ def photo_meta(path):
             ts = dt.replace(tzinfo=datetime.timezone(sign*datetime.timedelta(hours=int(hh), minutes=int(mm)))).timestamp()
     except Exception as e:
         print(f"  meta {path}: {e}")
+    if isinstance(desc, bytes):
+        desc = desc.decode("utf-8", "replace")
+    if isinstance(desc, str):
+        try:
+            fixed = desc.encode("latin-1").decode("utf-8")
+            if fixed != desc: desc = fixed   # repair UTF-8 read as Latin-1 (â€” etc.)
+        except UnicodeError:
+            pass
     return desc, ts
 
 TIMED.sort()
