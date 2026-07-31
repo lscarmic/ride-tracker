@@ -70,7 +70,11 @@ document.title=CONFIG.title;
 const ir=document.getElementById('inreach');
 if(CONFIG.inreachUrl && !CONFIG.inreachUrl.includes('YOURNAME')) ir.href=CONFIG.inreachUrl; else ir.style.display='none';
 const map=L.map('map');
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(map);
+const streets=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19});
+const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',maxZoom:19});
+(localStorage.getItem('baselayer')==='Satellite'?satellite:streets).addTo(map);
+L.control.layers({'Map':streets,'Satellite':satellite},null,{position:'bottomleft'}).addTo(map);
+map.on('baselayerchange',e=>localStorage.setItem('baselayer',e.name));
 const group=L.featureGroup().addTo(map);
 fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   const legDiv=document.getElementById('legs');
